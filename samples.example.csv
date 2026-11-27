@@ -1,0 +1,7 @@
+sample_id,fastq,source,biological_id,replicate_id,is_control,control_type
+tick_001,fastq/barcode01.fastq.gz,tick,tick_001,pcr1,false,
+tick_001_pcr2,fastq/barcode02.fastq.gz,tick,tick_001,pcr2,false,
+human_001,fastq/barcode03.fastq.gz,human,human_001,pcr1,false,
+ntc_01,fastq/barcode04.fastq.gz,control,,,true,negative
+positive_01,fastq/barcode05.fastq.gz,control,,,true,positive
+

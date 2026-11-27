@@ -1,0 +1,89 @@
+Bootstrap: docker
+From: python:3.12.14-slim-bookworm
+Stage: builder
+
+%files
+    pyproject.toml /opt/spirohap/pyproject.toml
+    README.md /opt/spirohap/README.md
+    LICENSE /opt/spirohap/LICENSE
+    src /opt/spirohap/src
+
+%post
+    set -eu
+
+    # A compiler is only needed if no compatible Edlib wheel exists for the
+    # build architecture. It remains in this temporary builder stage.
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential
+    rm -rf /var/lib/apt/lists/*
+
+    # Pin the only runtime dependency. Build SpiroHap from the source copied
+    # above, rather than downloading a separate SpiroHap distribution.
+    python -m pip wheel --no-cache-dir --wheel-dir /wheels \
+        "edlib==1.3.9.post1"
+    python -m pip wheel --no-cache-dir --no-deps --wheel-dir /wheels \
+        /opt/spirohap
+
+
+Bootstrap: docker
+From: python:3.12.14-slim-bookworm
+Stage: final
+
+%files from builder
+    /wheels /wheels
+
+%post
+    set -eu
+
+    # Install only the wheels produced in the builder. No compiler or package
+    # index is needed in the final image.
+    python -m pip install --no-cache-dir --no-index --find-links=/wheels \
+        "edlib==1.3.9.post1" "spirohap==0.1.0"
+    rm -rf /wheels
+
+    # Stable bind target for input data and results.
+    mkdir -p /work
+
+%environment
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export PYTHONHASHSEED=0
+    export PYTHONNOUSERSITE=1
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    exec /usr/local/bin/spirohap "$@"
+
+%test
+    set -eu
+
+    /usr/local/bin/spirohap --version | grep -q '^spirohap 0\.1\.0$'
+    /usr/local/bin/spirohap doctor | grep -q '^edlib[[:space:]]\+1\.3\.9\.post1$'
+
+    test_root="$(mktemp -d /tmp/spirohap-container-test.XXXXXX)"
+    trap 'rm -rf "$test_root"' EXIT
+    /usr/local/bin/spirohap demo --out "$test_root/demo" --jobs 1
+    test -s "$test_root/demo/results/haplotypes.fasta"
+    test -s "$test_root/demo/results/report.html"
+
+%labels
+    org.opencontainers.image.title SpiroHap
+    org.opencontainers.image.description Read-level haplotype reconstruction for Spiroplasma ixodetis 23S Nanopore amplicons
+    org.opencontainers.image.version 0.1.0
+    org.opencontainers.image.licenses MIT
+
+%help
+    SpiroHap 0.1.0
+
+    Reconstruct full-length 23S amplicon haplotypes from demultiplexed Oxford
+    Nanopore FASTQ files. This is a research workflow, not a clinical diagnostic.
+
+    Check the installation:
+        apptainer run spirohap_0.1.0.sif doctor
+
+    Run an analysis after binding a host directory to /work:
+        apptainer run --cleanenv --bind "$PWD:/work" spirohap_0.1.0.sif \
+            run --samples /work/samples.csv --config /work/config.toml \
+            --out /work/results_23s --jobs 4

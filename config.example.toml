@@ -1,0 +1,34 @@
+# Published S. ixodetis 23S sequencing primers. Change these if your assay differs.
+[primers]
+forward = "GGTCAATCGGCATGAAGGATTC"
+reverse = "AGCCGGCGAGTTACGATTA"
+search_window = 90
+max_edits = 4
+
+[filters]
+min_mean_q = 12.0
+min_base_q = 8
+# Length after both primers have been removed. A ~750-bp product is usually ~700 bp here.
+min_trimmed_length = 620
+max_trimmed_length = 820
+max_reads_per_sample = 5000
+
+[haplotypes]
+min_site_depth = 20
+min_alt_reads = 8
+min_snp_fraction = 0.05
+min_indel_fraction = 0.15
+min_haplotype_reads = 10
+min_haplotype_fraction = 0.05
+max_haplotypes = 6
+max_variant_events = 30
+max_profile_mismatches = 1
+consensus_fraction = 0.60
+polish_rounds = 2
+min_strand_fraction = 0.05
+
+[runtime]
+random_seed = 20260815
+medoid_candidates = 30
+medoid_comparisons = 80
+
